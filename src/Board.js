@@ -9,37 +9,40 @@ const calculateTime = (start, end) => {
     return formatTime(end-start);
 }
 
-const formatTime = (sdiff) => {
-    let neg = sdiff < 0;
-    let diff = Math.abs(sdiff);
-    // const ms = diff % 1000;
+const formatTime = (sdiff, ismin) => {
+    let smdiff = sdiff * (ismin ? 60000 : 1);
+    let neg = smdiff < 0;
+    let diff = Math.abs(smdiff);
+    const ms = diff % 1000;
     const s = Math.floor(diff / 1000) % 60;
     const m = Math.floor(diff / 60000) % 60;
     const h = Math.floor(diff / 3600000);
-    return `${neg ? '-' : ''}${h ? h.toString()+':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${neg ? '-' : ''}${h ? h.toString()+':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}${!ismin ? '.' + ms.toString().padStart(3, '0') : ''}`;
 }
 
-const text2Format = (min) => {
+const text2Format = (min, ismin) => {
     const a = parseInt(min);
-    if(isNaN(a) || a <= 0) return undefined;
-    return formatTime(a * 60000);
+    if(isNaN(a)) return undefined;
+    return formatTime(a, ismin);
 }
 
-const sumTexts2Format = (texts) => {
+const sumTexts2Format = (texts, ismin) => {
     let sum = 0;
     for(let i = 0; i < texts.length; i++) {
         const a = parseInt(texts[i]);
-        if(isNaN(a) || a <= 0) return undefined;
-        sum += a * 60000;
+        if(isNaN(a)) return undefined;
+        sum += a;
     }
-    return formatTime(sum);
+    return formatTime(sum, ismin);
 }
 
 // expandable list jsx
 const ExpandableList = (props) => {
 
     return (
-        <Right2TextsWrapper text1={sumTexts2Format(props.list.items.map(x => x.time)) ?? 'Invalid'} text2="00:00.000">
+        <Right2TextsWrapper 
+            text1={sumTexts2Format(props.list.items.map(x => x.time), true) ?? 'Invalid'}
+            text2={sumTexts2Format(props.list.items.map(x => x.currTime))}>
             <ListItem className="expandable-list">
                 <Box>
                     {/* <span className="expandable-list-header-index">
@@ -70,7 +73,9 @@ const ExpandableList = (props) => {
 // expandable list item jsx
 const ExpandableListItem = (props) => {
     return (
-        <Right2TextsWrapper text1={text2Format(props.item.time) ?? 'Invalid'} text2="00.00:000">
+        <Right2TextsWrapper
+            text1={text2Format(props.item.time, true) ?? 'Invalid'}
+            text2={text2Format(props.item.currTime)}>
             <ListItem className="expandable-list-item">
                 <Box sx={{ ml: 4, display: 'flex' }}>
                     <TextField className="expandable-list-item-title"
@@ -84,8 +89,8 @@ const ExpandableListItem = (props) => {
                         variant="standard"
                         sx={{ width: 80, ml: 2 }}
                         onInput={e => props.onUpdateTime(e.target.value)} />
-                    <IconButton onClick={()=>{}}>
-                        {props.counter ? <Pause>Pause</Pause> : <PlayArrow>Play</PlayArrow>}
+                    <IconButton onClick={props.onToggleTimer}>
+                        {props.item.counter ? <Pause>Pause</Pause> : <PlayArrow>Play</PlayArrow>}
                     </IconButton>
                     <IconButton onClick={props.onDelete}>
                         <Delete>Delete</Delete>
@@ -105,7 +110,7 @@ const Right2TextsWrapper = (props) => {
 
             <Box sx={{ alignItems: 'center', display: 'flex' }}>
                 <Typography sx={{ m: 1, fontWeight: props.bold ? 'bold' : 'regular', width: 80 }}>{props.text1}</Typography>
-                <Typography sx={{ m: 1, fontWeight: props.bold ? 'bold' : 'regular', width: 80 }}>{props.text2}</Typography>
+                <Typography sx={{ m: 1, fontWeight: props.bold ? 'bold' : 'regular', width: 80, color: props.text2[0] === '-' ? 'red' : 'initial' }}>{props.text2}</Typography>
             </Box>
         </Box>
     );
@@ -128,7 +133,7 @@ class Board extends React.Component {
         lists.push({
             title: '',
             items: [],
-            open: true
+            open: true,
         });
         this.setState({ lists: lists });
     }
@@ -162,6 +167,10 @@ class Board extends React.Component {
         lists[index].items.push({
             title: '',
             time: '',
+            currTime: 0,
+            stackTime: null,
+            counter: null,
+            counterTime: 0,
         });
         this.setState({ lists: lists });
     }
@@ -180,6 +189,20 @@ class Board extends React.Component {
         this.setState({ lists: lists });
     }
 
+    // update item currTime
+    updateItemCurrTime = (listIndex, itemIndex, currTime) => {
+        const lists = this.state.lists;
+        if(lists[listIndex].items[itemIndex].currTime > 0 && currTime <= 0) {
+            let audio = new Audio(`https://media.geeksforgeeks.org/wp-content/uploads/20190531135120/beep.mp3`);
+            audio.volume = 0.3;
+            audio.play();
+            setTimeout(() => audio.play(), 800);
+            setTimeout(() => audio.play(), 1600);
+        }
+        lists[listIndex].items[itemIndex].currTime = currTime;
+        this.setState({ lists: lists });
+    }
+
     // delete item
     deleteItem = (listIndex, itemIndex) => {
         if(window.confirm('Are you sure you want to delete this item?')){
@@ -187,6 +210,54 @@ class Board extends React.Component {
             lists[listIndex].items.splice(itemIndex, 1);
             this.setState({ lists: lists });
         }
+    }
+
+    exportRecord = () => {
+        const lists = this.state.lists;
+        let record = '';
+        lists.forEach((list, listIndex) => {
+            record += 'Topic ' + list.title + '\n';
+            list.items.forEach((item, itemIndex) => {
+                record += item.title + ' ' + formatTime(item.time, true) + ' ' + formatTime(item.currTime) + '\n';
+            });
+            record += '\n';
+        });
+        navigator.clipboard.writeText(record);
+        alert('Record copied to clipboard!');
+    }
+
+
+    toggleTimer = (listIndex, itemIndex) => {
+        // time: original immutable value, stackTime: mutable ms value, currTime: display time
+        const lists = this.state.lists;
+        // lists[listIndex].items[itemIndex].counter = counter;
+
+        let counter = lists[listIndex].items[itemIndex].counter
+
+        if (counter) {
+            clearInterval(counter);
+            lists[listIndex].items[itemIndex].counter = null;
+            const diff = new Date().getTime() - lists[listIndex].items[itemIndex].counterTime;
+            lists[listIndex].items[itemIndex].stackTime -= diff;
+        } else {
+            if(lists[listIndex].items[itemIndex].stackTime == null){
+                const a = parseInt(lists[listIndex].items[itemIndex].time);
+                if(isNaN(a) || a <= 0) {
+                    alert('Invalid time');
+                    return;
+                }
+                lists[listIndex].items[itemIndex].stackTime = a * 60 * 1000;
+            }
+
+            lists[listIndex].items[itemIndex].counterTime = new Date().getTime();
+            lists[listIndex].items[itemIndex].counter = setInterval(() => {
+                // TODO: cannot read properties of undefined (reading 'counterTime')
+                const diff = new Date().getTime() - lists[listIndex].items[itemIndex].counterTime;
+                this.updateItemCurrTime(listIndex, itemIndex, lists[listIndex].items[itemIndex].stackTime - diff);
+            }, 50);
+        }
+
+        this.setState({ lists: lists });
     }
 
     // render
@@ -201,8 +272,8 @@ class Board extends React.Component {
                             </Typography>
                         </Right2TextsWrapper>
                         <Right2TextsWrapper 
-                            text1={sumTexts2Format(this.state.lists.map(list => list.items.map(x => x.time)).flat()) ?? 'Invalid'} 
-                            text2="00:00.000">
+                            text1={sumTexts2Format(this.state.lists.map(list => list.items.map(x => x.time)).flat(), true) ?? 'Invalid'} 
+                            text2={sumTexts2Format(this.state.lists.map(list => list.items.map(x => x.currTime)).flat())}>
                             <Typography>
                                 Total Time
                             </Typography>
@@ -233,6 +304,7 @@ class Board extends React.Component {
                                                     onDelete={() => this.deleteItem(listIndex, itemIndex)}
                                                     onUpdateTitle={(title) => this.updateItemTitle(listIndex, itemIndex, title)}
                                                     onUpdateTime={(time) => this.updateItemTime(listIndex, itemIndex, time)}
+                                                    onToggleTimer={() => this.toggleTimer(listIndex, itemIndex)}
                                                 />
                                             ) : null;
                                         })}
@@ -243,6 +315,9 @@ class Board extends React.Component {
                     </List>
                     <span className="board-header-button">
                         <Button onClick={this.addList}>Add Topic</Button>
+                    </span>
+                    <span className="board-header-button">
+                        <Button onClick={this.exportRecord}>Export Record</Button>
                     </span>
                 </CardContent>
             </Card>
