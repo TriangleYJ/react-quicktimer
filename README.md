@@ -1,4 +1,10 @@
-# Getting Started with Create React App
+# React QuickTimer
+
+https://triangleyj.github.io/react-quicktimer/
+
+Measure your time per topic and tasks with quicktimer!
+
+ps. Github copilot is awesome!
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
