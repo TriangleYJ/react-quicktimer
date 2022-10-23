@@ -2,49 +2,66 @@
 import './Board.css';
 import React from 'react';
 import { Box, TextField, IconButton, Card, CardContent, List, ListItem, Divider, Typography, Button } from '@mui/material';
-import { Add, Delete, PlayArrow, Pause } from '@mui/icons-material';
+import { Add, Delete, PlayArrow, Pause, KeyboardArrowDownSharp, KeyboardArrowUpSharp } from '@mui/icons-material';
 
 // calculate between two times and return formatted string with mm:ss.ms
 const calculateTime = (start, end) => {
-    const neg = end < start;
-    const diff = Math.abs(end - start);
-    const ms = diff % 1000;
-    const s = Math.floor(diff / 1000) % 60;
-    const m = Math.floor(diff / 60000) % 60;
-    return `${neg ? '-' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+    return formatTime(end-start);
 }
 
+const formatTime = (sdiff) => {
+    let neg = sdiff < 0;
+    let diff = Math.abs(sdiff);
+    // const ms = diff % 1000;
+    const s = Math.floor(diff / 1000) % 60;
+    const m = Math.floor(diff / 60000) % 60;
+    const h = Math.floor(diff / 3600000);
+    return `${neg ? '-' : ''}${h ? h.toString()+':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+const text2Format = (min) => {
+    const a = parseInt(min);
+    if(isNaN(a) || a <= 0) return undefined;
+    return formatTime(a * 60000);
+}
+
+const sumTexts2Format = (texts) => {
+    let sum = 0;
+    for(let i = 0; i < texts.length; i++) {
+        const a = parseInt(texts[i]);
+        if(isNaN(a) || a <= 0) return undefined;
+        sum += a * 60000;
+    }
+    return formatTime(sum);
+}
 
 // expandable list jsx
 const ExpandableList = (props) => {
 
     return (
-        <Right2TextsWrapper text1="00:00.000" text2="00:00.000">
+        <Right2TextsWrapper text1={sumTexts2Format(props.list.items.map(x => x.time)) ?? 'Invalid'} text2="00:00.000">
             <ListItem className="expandable-list">
                 <Box>
                     {/* <span className="expandable-list-header-index">
                     {props.index}
                 </span> */}
                     <TextField className="expandable-list-header-title"
-                        value={props.title}
+                        value={props.list.title}
                         variant="standard"
                         placeholder={'New Topic ' + props.index}
                         varient="standard"
                         onInput={e => props.onUpdateTitle(e.target.value)} />
-                    <span className="timer">
-                        {props.timer}
-                    </span>
-                    <IconButton edge="end" aria-label="add" className="expandable-list-header-button" onClick={props.onAdd}>
+                    <IconButton onClick={props.onAdd}>
                         <Add>Add</Add>
                     </IconButton>
-                    <IconButton edge="end" aria-label="delete" className="expandable-list-header-button" onClick={props.onDelete}>
+                    <IconButton onClick={props.onDelete}>
                         <Delete>Delete</Delete>
                     </IconButton>
-                </Box>
+                    <IconButton onClick={props.onUpdateOpen}>
+                        {props.list.open ? <KeyboardArrowUpSharp>Up</KeyboardArrowUpSharp> : <KeyboardArrowDownSharp>Down</KeyboardArrowDownSharp>}
+                    </IconButton>
 
-                <div className="expandable-list-body">
-                    {props.children}
-                </div>
+                </Box>
             </ListItem>
         </Right2TextsWrapper>
     );
@@ -53,17 +70,17 @@ const ExpandableList = (props) => {
 // expandable list item jsx
 const ExpandableListItem = (props) => {
     return (
-        <Right2TextsWrapper text1="00.00:000" text2="00.00:000">
+        <Right2TextsWrapper text1={text2Format(props.item.time) ?? 'Invalid'} text2="00.00:000">
             <ListItem className="expandable-list-item">
                 <Box sx={{ ml: 4, display: 'flex' }}>
                     <TextField className="expandable-list-item-title"
-                        value={props.title}
+                        value={props.item.title}
                         placeholder={'New Task ' + props.index}
                         variant="standard"
                         onInput={e => props.onUpdateTitle(e.target.value)} />
                     <TextField className="expandable-list-item-title"
-                        value={props.time}
-                        placeholder={'Expect (s)'}
+                        value={props.item.time}
+                        placeholder={'Expect (m)'}
                         variant="standard"
                         sx={{ width: 80, ml: 2 }}
                         onInput={e => props.onUpdateTime(e.target.value)} />
@@ -132,11 +149,19 @@ class Board extends React.Component {
         this.setState({ lists: lists });
     }
 
+    updateListOpen = (index, open) => {
+        const lists = this.state.lists;
+        lists[index].open = open;
+        this.setState({ lists: lists });
+    }
+
     // add item
     addItem = (index) => {
         const lists = this.state.lists;
+        lists[index].open = true;
         lists[index].items.push({
-            title: ''
+            title: '',
+            time: '',
         });
         this.setState({ lists: lists });
     }
@@ -175,7 +200,9 @@ class Board extends React.Component {
                                 Record
                             </Typography>
                         </Right2TextsWrapper>
-                        <Right2TextsWrapper text1="00:00.000" text2="00:00.000">
+                        <Right2TextsWrapper 
+                            text1={sumTexts2Format(this.state.lists.map(list => list.items.map(x => x.time)).flat()) ?? 'Invalid'} 
+                            text2="00:00.000">
                             <Typography>
                                 Total Time
                             </Typography>
@@ -185,28 +212,29 @@ class Board extends React.Component {
                         <div className="board-body">
                             {this.state.lists.map((list, listIndex) => {
                                 return (
-                                    <div>
+                                    <div key={listIndex}>
                                         <Divider />
                                         <ExpandableList
                                             key={listIndex}
                                             index={listIndex}
-                                            title={list.title}
+                                            list={list}
                                             onAdd={() => this.addItem(listIndex)}
                                             onDelete={() => this.deleteList(listIndex)}
                                             onUpdateTitle={(title) => this.updateListTitle(listIndex, title)}
+                                            onUpdateOpen={() => this.updateListOpen(listIndex, !list.open)}
                                         >
                                         </ExpandableList>
                                         {list.items.map((item, itemIndex) => {
-                                            return (
+                                            return list.open ? (
                                                 <ExpandableListItem
                                                     key={itemIndex}
                                                     index={itemIndex}
-                                                    title={item.title}
+                                                    item={item}
                                                     onDelete={() => this.deleteItem(listIndex, itemIndex)}
                                                     onUpdateTitle={(title) => this.updateItemTitle(listIndex, itemIndex, title)}
-                                                    onUpdateTime={(title) => this.updateItemTime(listIndex, itemIndex, title)}
+                                                    onUpdateTime={(time) => this.updateItemTime(listIndex, itemIndex, time)}
                                                 />
-                                            );
+                                            ) : null;
                                         })}
                                     </div>
                                 );
