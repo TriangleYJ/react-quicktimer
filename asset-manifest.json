@@ -1,15 +1,15 @@
 {
   "files": {
     "main.css": "/react-quicktimer/static/css/main.e6c13ad2.css",
-    "main.js": "/react-quicktimer/static/js/main.e8d491a3.js",
+    "main.js": "/react-quicktimer/static/js/main.48180c89.js",
     "static/js/787.74d2ea1e.chunk.js": "/react-quicktimer/static/js/787.74d2ea1e.chunk.js",
     "index.html": "/react-quicktimer/index.html",
     "main.e6c13ad2.css.map": "/react-quicktimer/static/css/main.e6c13ad2.css.map",
-    "main.e8d491a3.js.map": "/react-quicktimer/static/js/main.e8d491a3.js.map",
+    "main.48180c89.js.map": "/react-quicktimer/static/js/main.48180c89.js.map",
     "787.74d2ea1e.chunk.js.map": "/react-quicktimer/static/js/787.74d2ea1e.chunk.js.map"
   },
   "entrypoints": [
     "static/css/main.e6c13ad2.css",
-    "static/js/main.e8d491a3.js"
+    "static/js/main.48180c89.js"
   ]
 }
