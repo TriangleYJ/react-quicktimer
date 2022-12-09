@@ -127,6 +127,22 @@ class Board extends React.Component {
         };
     }
 
+    // save this.state.lists to localstorage
+    setListandSave = (lists) => {
+        this.setState({ lists: lists });
+        localStorage.setItem('lists', JSON.stringify(this.state.lists));
+    }
+
+    // load this.state.lists from localstorage
+    load = () => {
+        const lists = JSON.parse(localStorage.getItem('lists'));
+        if(lists) this.setState({ lists: lists });
+    }
+
+    componentDidMount() {
+        this.load();
+    }
+
     // add list
     addList = () => {
         const lists = this.state.lists;
@@ -135,7 +151,7 @@ class Board extends React.Component {
             items: [],
             open: true,
         });
-        this.setState({ lists: lists });
+        this.setListandSave(lists);
     }
 
     // delete list
@@ -143,7 +159,7 @@ class Board extends React.Component {
         if(window.confirm('Are you sure you want to delete this list?')){
             const lists = this.state.lists;
             lists.splice(index, 1);
-            this.setState({ lists: lists });
+            this.setListandSave(lists);
         }
     }
 
@@ -151,13 +167,13 @@ class Board extends React.Component {
     updateListTitle = (index, title) => {
         const lists = this.state.lists;
         lists[index].title = title;
-        this.setState({ lists: lists });
+        this.setListandSave(lists);
     }
 
     updateListOpen = (index, open) => {
         const lists = this.state.lists;
         lists[index].open = open;
-        this.setState({ lists: lists });
+        this.setListandSave(lists);
     }
 
     // add item
@@ -172,21 +188,21 @@ class Board extends React.Component {
             counter: null,
             counterTime: 0,
         });
-        this.setState({ lists: lists });
+        this.setListandSave(lists);
     }
 
     // update item title
     updateItemTitle = (listIndex, itemIndex, title) => {
         const lists = this.state.lists;
         lists[listIndex].items[itemIndex].title = title;
-        this.setState({ lists: lists });
+        this.setListandSave(lists);
     }
 
     // update item time
     updateItemTime = (listIndex, itemIndex, time) => {
         const lists = this.state.lists;
         lists[listIndex].items[itemIndex].time = time;
-        this.setState({ lists: lists });
+        this.setListandSave(lists);
     }
 
     // update item currTime
@@ -200,7 +216,7 @@ class Board extends React.Component {
             setTimeout(() => audio.play(), 1600);
         }
         lists[listIndex].items[itemIndex].currTime = currTime;
-        this.setState({ lists: lists });
+        this.setListandSave(lists);
     }
 
     // delete item
@@ -208,7 +224,7 @@ class Board extends React.Component {
         if(window.confirm('Are you sure you want to delete this item?')){
             const lists = this.state.lists;
             lists[listIndex].items.splice(itemIndex, 1);
-            this.setState({ lists: lists });
+            this.setListandSave(lists);
         }
     }
 
@@ -257,7 +273,7 @@ class Board extends React.Component {
             }, 50);
         }
 
-        this.setState({ lists: lists });
+        this.setListandSave(lists);
     }
 
     // render
